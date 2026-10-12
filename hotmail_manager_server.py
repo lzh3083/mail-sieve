@@ -185,6 +185,18 @@ SERVICE_RULES: list[tuple[str, str, list[str], list[str]]] = [
         ["hkticketing.com"],
         ["hk ticketing"],
     ),
+    (
+        "amazon",
+        "Amazon (亚马逊)",
+        ["amazon.com", "amazon.co.jp", "amazon.co.uk"],
+        ["amazonアカウント", "amazon account", "your amazon verification"],
+    ),
+    (
+        "dragonnest",
+        "Dragon Nest (龙之谷)",
+        ["dragonnest.com"],
+        ["[dnsea]", "dragon nest"],
+    ),
 ]
 
 
@@ -1126,6 +1138,11 @@ def analyze_mailbox_messages(
             msg_tags.append("🚨ChatGPT风控锁号")
             if "ChatGPT 风控锁号 (Account Locked)" not in risk_flags:
                 risk_flags.append("ChatGPT 风控锁号 (Account Locked)")
+
+        if "your x account has been suspended" in subj_low or "automatically suspended for violating the x rules" in body_low:
+            msg_tags.append("⚠️X账号封禁")
+            if "曾绑定的 X(Twitter) 账号被封禁" not in risk_flags:
+                risk_flags.append("曾绑定的 X(Twitter) 账号被封禁")
 
         # 4. 匹配各类互联网/AI服务注册痕迹
         for svc_key, svc_label, domain_list, kw_list in SERVICE_RULES:
