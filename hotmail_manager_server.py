@@ -1790,7 +1790,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 )
                 up = upsert_mailboxes(recs)
                 if body.get("auto_audit") and recs:
-                    run_batch_audit(scope="pending", target_service=str(body.get("target_service") or "openai"), blocking=False)
+                    run_batch_audit(
+                        emails=[r["email"] for r in recs],
+                        target_service=str(body.get("target_service") or "openai"),
+                        blocking=False,
+                    )
                 self._send_json({
                     "ok": True,
                     "extracted_count": len(recs),
