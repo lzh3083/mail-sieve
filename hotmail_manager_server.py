@@ -1454,6 +1454,83 @@ def _deserialize_row(row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
             d[k] = []
     d["can_register_target"] = bool(d.get("can_register_target"))
     d["has_oauth"] = bool(d.get("client_id") and d.get("refresh_token"))
+
+    # 计算三大核心业务可用性分类：一、可以注册Codex；二、可以注册Grok；三、可以注册Claude
+    cur_email_low = str(d.get("email") or "").strip().lower()
+    st = str(d.get("audit_status") or "pending")
+    auth_ch = str(d.get("auth_channel") or "")
+    is_alive = st not in ("auth_failed", "pending") and auth_ch not in ("failed", "")
+    risk_flags: list[str] = d.get("risk_flags") or []
+    former_aliases: list[str] = d.get("former_aliases") or []
+    reg_svcs: list[str] = d.get("registered_services") or []
+    samples: list[dict[str, Any]] = d.get("messages_sample") or []
+
+    is_shared_alias = bool(former_aliases) or ("改别名翻新 (Alias-Recycled)" in risk_flags)
+
+    own_services: list[str] = []
+    alias_services: list[str] = []
+    own_openai_banned = False
+
+    if not is_shared_alias:
+        own_services = list(reg_svcs)
+        if any("Access Deactivated" in rf or "Account Locked" in rf for rf in risk_flags):
+            own_openai_banned = True
+    else:
+        for m in samples:
+            to_str = str(m.get("to") or "")
+            rcpts = [
+                a.lower().rstrip(".")
+                for a in re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", to_str)
+            ]
+            is_own_msg = (not rcpts) or (cur_email_low in rcpts)
+            m_tags = m.get("tags") or []
+            subj_low = str(m.get("subject") or "").lower()
+            snip_low = str(m.get("snippet") or "").lower()
+            if is_own_msg and (
+                "access deactivated" in subj_low
+                or "account has been deactivated" in snip_low
+                or "action required to secure your chatgpt account" in subj_low
+            ):
+                own_openai_banned = True
+            for svc_key, svc_label, domain_list, kw_list in SERVICE_RULES:
+                comb = f"{subj_low}\n{str(m.get('from') or '').lower()}\n{snip_low}"
+                if (
+                    svc_label in m_tags
+                    or any(dom in str(m.get("from") or "").lower() for dom in domain_list)
+                    or any(kw in comb for kw in kw_list)
+                ):
+                    if is_own_msg:
+                        if svc_label not in own_services:
+                            own_services.append(svc_label)
+                    else:
+                        if svc_label not in alias_services:
+                            alias_services.append(svc_label)
+
+    if "本地已存在注册凭证 (output_cpa)" in risk_flags and "OpenAI / ChatGPT" not in own_services:
+        own_services.append("OpenAI / ChatGPT")
+
+    def _calc_biz(svc_label: str, extra_ban: bool = False) -> tuple[bool, str]:
+        if not is_alive:
+            return False, "dead"
+        if svc_label in own_services or extra_ban:
+            return False, "registered"
+        if is_shared_alias:
+            return True, "alias_ok"
+        return True, "clean_ok"
+
+    can_codex, codex_status = _calc_biz("OpenAI / ChatGPT", extra_ban=own_openai_banned)
+    can_grok, grok_status = _calc_biz("Grok / xAI")
+    can_claude, claude_status = _calc_biz("Claude / Anthropic")
+
+    d["is_shared_alias"] = is_shared_alias
+    d["own_services"] = own_services
+    d["alias_services"] = alias_services
+    d["can_codex"] = can_codex
+    d["codex_status"] = codex_status  # clean_ok | alias_ok | registered | dead
+    d["can_grok"] = can_grok
+    d["grok_status"] = grok_status    # clean_ok | alias_ok | registered | dead
+    d["can_claude"] = can_claude
+    d["claude_status"] = claude_status  # clean_ok | alias_ok | registered | dead
     return d
 
 
@@ -1469,7 +1546,7 @@ def list_mailboxes() -> list[dict[str, Any]]:
 
 def get_dashboard_summary() -> dict[str, Any]:
     items = list_mailboxes()
-    summary = {
+    summary: dict[str, Any] = {
         "total": len(items),
         "clean_ready": 0,
         "other_services_only": 0,
@@ -1478,6 +1555,15 @@ def get_dashboard_summary() -> dict[str, Any]:
         "auth_failed": 0,
         "pending": 0,
         "can_register_count": 0,
+        "codex_total": 0,
+        "codex_clean": 0,
+        "codex_alias": 0,
+        "grok_total": 0,
+        "grok_clean": 0,
+        "grok_alias": 0,
+        "claude_total": 0,
+        "claude_clean": 0,
+        "claude_alias": 0,
         "batches": [],
         "service_breakdown": {},
     }
@@ -1491,6 +1577,28 @@ def get_dashboard_summary() -> dict[str, Any]:
             summary["pending"] += 1
         if item.get("can_register_target"):
             summary["can_register_count"] += 1
+
+        if item.get("can_codex"):
+            summary["codex_total"] += 1
+            if item.get("codex_status") == "clean_ok":
+                summary["codex_clean"] += 1
+            else:
+                summary["codex_alias"] += 1
+
+        if item.get("can_grok"):
+            summary["grok_total"] += 1
+            if item.get("grok_status") == "clean_ok":
+                summary["grok_clean"] += 1
+            else:
+                summary["grok_alias"] += 1
+
+        if item.get("can_claude"):
+            summary["claude_total"] += 1
+            if item.get("claude_status") == "clean_ok":
+                summary["claude_clean"] += 1
+            else:
+                summary["claude_alias"] += 1
+
         if item.get("batch_no"):
             batches_set.add(item["batch_no"])
         for svc in item.get("registered_services") or []:

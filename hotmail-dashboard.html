@@ -191,6 +191,55 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
   width: 0%; transition: width .25s ease;
 }
 
+/* Three Core Business Eligibility Cards */
+.biz-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.biz-card {
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: .16s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+.biz-card:hover { transform: translateY(-2px); border-color: #60a5fa; }
+.biz-card.active-filter { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18); background: #f8fbff; }
+.biz-card.codex { border-top: 4px solid #059669; }
+.biz-card.grok { border-top: 4px solid #2563eb; }
+.biz-card.claude { border-top: 4px solid #7c3aed; }
+.biz-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.biz-title { font-size: 14.5px; font-weight: 800; color: #0f172a; }
+.biz-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.biz-num { font-size: 28px; font-weight: 850; letter-spacing: -.03em; line-height: 1; }
+.biz-breakdown {
+  display: flex; gap: 8px; flex-wrap: wrap; font-size: 11.5px; font-weight: 600;
+}
+.biz-pill {
+  padding: 2px 8px; border-radius: 99px; background: #f1f5f9; color: #334155;
+}
+.biz-actions {
+  display: flex; gap: 6px; flex-wrap: wrap; padding-top: 8px; border-top: 1px dashed var(--line);
+}
+
+.biz-status-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 3px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 700;
+  margin-bottom: 4px; border: 1px solid transparent;
+}
+.biz-status-row.ok-clean { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.biz-status-row.ok-alias { background: #faf5ff; color: #6d28d9; border-color: #ddd6fe; }
+.biz-status-row.no-reg { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.biz-status-row.no-dead { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+
 /* Stats Grid */
 .stats {
   display: grid;
@@ -377,6 +426,7 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
 
 @media (max-width: 1024px) {
   .workflow-grid { grid-template-columns: 1fr; }
+  .biz-grid { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 640px) {
@@ -567,6 +617,69 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     </div>
   </section>
 
+  <!-- 核心三大目标业务分类看板（一、可以注册Codex；二、可以注册Grok；三、可以注册Claude） -->
+  <section class="biz-grid">
+    <div class="biz-card codex" data-status-filter="BIZ_CODEX">
+      <div class="biz-head">
+        <div>
+          <div class="biz-title">一、可以注册 Codex (OpenAI / ChatGPT)</div>
+          <div class="biz-sub">当前邮箱地址未注册过 OpenAI 且 Token 正常收信</div>
+        </div>
+        <div class="biz-num" id="bizCodexTotal" style="color:#059669">0</div>
+      </div>
+      <div class="biz-breakdown">
+        <span class="biz-pill" id="bizCodexClean">🟢 独立干净: 0</span>
+        <span class="biz-pill" id="bizCodexAlias">🟣 共享母箱子别名: 0</span>
+      </div>
+      <div class="biz-actions" onclick="event.stopPropagation()">
+        <button class="btn sm primary" data-biz-filter="BIZ_CODEX">🔍 筛选全部</button>
+        <button class="btn sm" data-biz-filter="BIZ_CODEX_CLEAN">✨ 仅看独立干净</button>
+        <button class="btn sm" data-biz-copy="codex">📋 复制卡密</button>
+        <button class="btn sm" data-biz-export="codex">📥 导出TXT</button>
+      </div>
+    </div>
+
+    <div class="biz-card grok" data-status-filter="BIZ_GROK">
+      <div class="biz-head">
+        <div>
+          <div class="biz-title">二、可以注册 Grok (xAI)</div>
+          <div class="biz-sub">当前邮箱地址未注册过 Grok/xAI 且 Token 正常收信</div>
+        </div>
+        <div class="biz-num" id="bizGrokTotal" style="color:#2563eb">0</div>
+      </div>
+      <div class="biz-breakdown">
+        <span class="biz-pill" id="bizGrokClean">🟢 独立干净: 0</span>
+        <span class="biz-pill" id="bizGrokAlias">🟣 共享母箱子别名: 0</span>
+      </div>
+      <div class="biz-actions" onclick="event.stopPropagation()">
+        <button class="btn sm primary" data-biz-filter="BIZ_GROK">🔍 筛选全部</button>
+        <button class="btn sm" data-biz-filter="BIZ_GROK_CLEAN">✨ 仅看独立干净</button>
+        <button class="btn sm" data-biz-copy="grok">📋 复制卡密</button>
+        <button class="btn sm" data-biz-export="grok">📥 导出TXT</button>
+      </div>
+    </div>
+
+    <div class="biz-card claude" data-status-filter="BIZ_CLAUDE">
+      <div class="biz-head">
+        <div>
+          <div class="biz-title">三、可以注册 Claude (Anthropic)</div>
+          <div class="biz-sub">当前邮箱地址未注册过 Claude 且 Token 正常收信</div>
+        </div>
+        <div class="biz-num" id="bizClaudeTotal" style="color:#7c3aed">0</div>
+      </div>
+      <div class="biz-breakdown">
+        <span class="biz-pill" id="bizClaudeClean">🟢 独立干净: 0</span>
+        <span class="biz-pill" id="bizClaudeAlias">🟣 共享母箱子别名: 0</span>
+      </div>
+      <div class="biz-actions" onclick="event.stopPropagation()">
+        <button class="btn sm primary" data-biz-filter="BIZ_CLAUDE">🔍 筛选全部</button>
+        <button class="btn sm" data-biz-filter="BIZ_CLAUDE_CLEAN">✨ 仅看独立干净</button>
+        <button class="btn sm" data-biz-copy="claude">📋 复制卡密</button>
+        <button class="btn sm" data-biz-export="claude">📥 导出TXT</button>
+      </div>
+    </div>
+  </section>
+
   <!-- 6张核心分类统计卡片（点击可筛选） -->
   <section class="stats">
     <div class="stat active-filter" data-status-filter="">
@@ -613,8 +726,14 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
       <span>⌕</span>
       <input id="searchInput" class="control" placeholder="搜索邮箱地址、批次号、注册过的服务（如 OpenAI / 1040 / Cursor / X）、前身别名或邮件主题…">
     </div>
-    <select id="filterStatus" class="control" style="width:185px">
+    <select id="filterStatus" class="control" style="width:235px">
       <option value="">审查分类：全部</option>
+      <option value="BIZ_CODEX">一、可以注册 Codex（全部）</option>
+      <option value="BIZ_CODEX_CLEAN">一、可以注册 Codex（仅独立干净）</option>
+      <option value="BIZ_GROK">二、可以注册 Grok（全部）</option>
+      <option value="BIZ_GROK_CLEAN">二、可以注册 Grok（仅独立干净）</option>
+      <option value="BIZ_CLAUDE">三、可以注册 Claude（全部）</option>
+      <option value="BIZ_CLAUDE_CLEAN">三、可以注册 Claude（仅独立干净）</option>
       <option value="CAN_REGISTER">✅ 可用于注册目标业务</option>
       <option value="clean_ready">🟢 全新纯净 (0服务)</option>
       <option value="other_services_only">🟡 仅注册过其他服务</option>
@@ -636,12 +755,12 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     <table class="table">
       <thead>
         <tr>
-          <th style="width:230px">邮箱地址 / 批次 / 通道</th>
-          <th style="width:145px">审查分类</th>
-          <th style="width:130px">能否注册业务</th>
+          <th style="width:225px">邮箱地址 / 批次 / 通道</th>
+          <th style="width:140px">审查分类</th>
+          <th style="width:190px">三大业务可用性 (Codex / Grok / Claude)</th>
           <th style="width:220px">收件箱已注册服务</th>
           <th>风险取证 / 前身别名 / 最新邮件摘要</th>
-          <th style="width:110px">历史邮件</th>
+          <th style="width:105px">历史邮件</th>
           <th style="width:155px">操作</th>
         </tr>
       </thead>
@@ -915,6 +1034,19 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     $('stBadDetail').textContent = `封号翻新 ${s.blacklisted_recycled || 0} · Token失效 ${s.auth_failed || 0}`;
     $('stBatchNote').textContent = `共 ${(s.batches || []).length || 1} 个批次`;
 
+    // 更新三大核心业务分类看板
+    $('bizCodexTotal').textContent = s.codex_total ?? 0;
+    $('bizCodexClean').textContent = `🟢 独立干净: ${s.codex_clean ?? 0}`;
+    $('bizCodexAlias').textContent = `🟣 共享母箱子别名: ${s.codex_alias ?? 0}`;
+
+    $('bizGrokTotal').textContent = s.grok_total ?? 0;
+    $('bizGrokClean').textContent = `🟢 独立干净: ${s.grok_clean ?? 0}`;
+    $('bizGrokAlias').textContent = `🟣 共享母箱子别名: ${s.grok_alias ?? 0}`;
+
+    $('bizClaudeTotal').textContent = s.claude_total ?? 0;
+    $('bizClaudeClean').textContent = `🟢 独立干净: ${s.claude_clean ?? 0}`;
+    $('bizClaudeAlias').textContent = `🟣 共享母箱子别名: ${s.claude_alias ?? 0}`;
+
     // 更新批次下拉框
     const batches = s.batches || [];
     const curFilterBatch = $('filterBatch').value;
@@ -944,6 +1076,19 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     renderTable();
   }
 
+  function renderBizBadge(title, status) {
+    if (status === 'clean_ok') {
+      return `<div class="biz-status-row ok-clean"><span>${title}</span><span>✅ 可注册</span></div>`;
+    }
+    if (status === 'alias_ok') {
+      return `<div class="biz-status-row ok-alias" title="当前子别名未注册该业务，但母收件箱含其他别名邮件"><span>${title}</span><span>🟣 子别名可注</span></div>`;
+    }
+    if (status === 'registered') {
+      return `<div class="biz-status-row no-reg"><span>${title}</span><span>❌ 已注册</span></div>`;
+    }
+    return `<div class="biz-status-row no-dead"><span>${title}</span><span>⚫ 不可用</span></div>`;
+  }
+
   function renderTable() {
     const q = $('searchInput').value.trim().toLowerCase();
     const stFilter = $('filterStatus').value;
@@ -951,9 +1096,15 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     const svcFilter = state.activeServiceFilter;
 
     const filtered = state.mailboxes.filter(r => {
-      if (stFilter === 'CAN_REGISTER' && !r.can_register_target) return false;
+      if (stFilter === 'BIZ_CODEX' && !r.can_codex) return false;
+      else if (stFilter === 'BIZ_CODEX_CLEAN' && r.codex_status !== 'clean_ok') return false;
+      else if (stFilter === 'BIZ_GROK' && !r.can_grok) return false;
+      else if (stFilter === 'BIZ_GROK_CLEAN' && r.grok_status !== 'clean_ok') return false;
+      else if (stFilter === 'BIZ_CLAUDE' && !r.can_claude) return false;
+      else if (stFilter === 'BIZ_CLAUDE_CLEAN' && r.claude_status !== 'clean_ok') return false;
+      else if (stFilter === 'CAN_REGISTER' && !r.can_register_target) return false;
       else if (stFilter === 'BAD_ALL' && !['blacklisted_recycled', 'auth_failed'].includes(r.audit_status)) return false;
-      else if (stFilter && !['CAN_REGISTER', 'BAD_ALL'].includes(stFilter) && r.audit_status !== stFilter) return false;
+      else if (stFilter && !['BIZ_CODEX', 'BIZ_CODEX_CLEAN', 'BIZ_GROK', 'BIZ_GROK_CLEAN', 'BIZ_CLAUDE', 'BIZ_CLAUDE_CLEAN', 'CAN_REGISTER', 'BAD_ALL'].includes(stFilter) && r.audit_status !== stFilter) return false;
 
       if (batchFilter && r.batch_no !== batchFilter) return false;
       if (svcFilter && !(r.registered_services || []).includes(svcFilter)) return false;
@@ -977,32 +1128,39 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     $('mailboxRows').innerHTML = filtered.map(r => {
       const [stLabel, stClass] = STATUS_META[r.audit_status] || STATUS_META.pending;
       const svcs = r.registered_services || [];
+      const ownSvcs = r.own_services || [];
+      const aliasSvcs = r.alias_services || [];
       const risks = r.risk_flags || [];
       const aliases = r.former_aliases || [];
       const samples = r.messages_sample || [];
 
-      const svcHtml = svcs.length
-        ? svcs.map(s => `<span class="tag ${s.includes('OpenAI') ? 'openai' : ''}">${esc(s)}</span>`).join('')
-        : (r.audit_status === 'auth_failed'
-            ? '<span style="color:var(--muted);font-size:12px">无法读取</span>'
-            : '<span class="tag ok">未发现注册记录</span>');
-
-      let canRegHtml = '';
-      if (r.audit_status === 'pending') {
-        canRegHtml = '<span style="color:var(--muted);font-size:12px">待审查</span>';
-      } else if (r.can_register_target) {
-        canRegHtml = `<div class="can-reg-yes">✅ 可用于注册</div><div style="font-size:11px;color:var(--muted)">${r.audit_status === 'clean_ready' ? '全新无痕迹' : '未注目标业务'}</div>`;
+      let svcHtml = '';
+      if (r.audit_status === 'auth_failed') {
+        svcHtml = '<span style="color:var(--muted);font-size:12px">无法读取</span>';
+      } else if (!svcs.length && !ownSvcs.length && !aliasSvcs.length) {
+        svcHtml = '<span class="tag ok">未发现注册记录</span>';
+      } else if (r.is_shared_alias) {
+        const ownPart = ownSvcs.length
+          ? `<div style="margin-bottom:3px"><span style="font-size:10.5px;color:#475569;font-weight:700">当前地址:</span> ${ownSvcs.map(s => `<span class="tag ${s.includes('OpenAI') ? 'openai' : ''}">${esc(s)}</span>`).join('')}</div>`
+          : `<div style="margin-bottom:3px"><span class="tag ok">当前子别名未注册任何服务</span></div>`;
+        const aliasPart = aliasSvcs.length
+          ? `<div><span style="font-size:10.5px;color:#7e22ce;font-weight:700">母箱其他别名:</span> ${aliasSvcs.map(s => `<span class="tag alias">${esc(s)}</span>`).join('')}</div>`
+          : '';
+        svcHtml = ownPart + aliasPart;
       } else {
-        const reasonShort = r.audit_status === 'target_registered'
-          ? '已注册过该业务'
-          : r.audit_status === 'blacklisted_recycled'
-            ? '封号/翻新黑历史'
-            : '凭证失效/不可连';
-        canRegHtml = `<div class="can-reg-no">❌ 不可注册</div><div style="font-size:11px;color:var(--muted)">${reasonShort}</div>`;
+        svcHtml = svcs.map(s => `<span class="tag ${s.includes('OpenAI') ? 'openai' : ''}">${esc(s)}</span>`).join('');
       }
 
+      const canRegHtml = r.audit_status === 'pending'
+        ? '<span style="color:var(--muted);font-size:12px">待审查</span>'
+        : [
+            renderBizBadge('一、Codex', r.codex_status),
+            renderBizBadge('二、Grok', r.grok_status),
+            renderBizBadge('三、Claude', r.claude_status)
+          ].join('');
+
       const aliasHtml = aliases.length
-        ? `<div style="margin-bottom:3px"><span class="tag alias">前身别名: ${esc(aliases.join(', '))}</span></div>`
+        ? `<div style="margin-bottom:3px"><span class="tag alias">同母箱其他别名(${aliases.length}): ${esc(aliases.slice(0, 4).join(', '))}${aliases.length > 4 ? ' 等' : ''}</span></div>`
         : '';
 
       const riskHtml = risks.length
@@ -1055,13 +1213,75 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     }).join('');
   }
 
-  // 点击统计卡片快速过滤
-  document.querySelectorAll('.stat[data-status-filter]').forEach(card => {
+  // 点击统计卡片或三大业务卡片快速过滤
+  function applyQuickStatusFilter(filterVal, activeEl) {
+    document.querySelectorAll('.stat, .biz-card').forEach(c => c.classList.remove('active-filter'));
+    if (activeEl) activeEl.classList.add('active-filter');
+    $('filterStatus').value = filterVal;
+    renderTable();
+  }
+
+  document.querySelectorAll('.stat[data-status-filter], .biz-card[data-status-filter]').forEach(card => {
     card.addEventListener('click', () => {
-      document.querySelectorAll('.stat').forEach(c => c.classList.remove('active-filter'));
-      card.classList.add('active-filter');
-      $('filterStatus').value = card.dataset.statusFilter;
-      renderTable();
+      applyQuickStatusFilter(card.dataset.statusFilter, card);
+    });
+  });
+
+  document.querySelectorAll('[data-biz-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.biz-card');
+      applyQuickStatusFilter(btn.dataset.bizFilter, card);
+    });
+  });
+
+  function getBizLines(bizKey) {
+    const batchFilter = $('filterBatch').value;
+    const rows = state.mailboxes.filter(r => {
+      if (batchFilter && r.batch_no !== batchFilter) return false;
+      if (bizKey === 'codex') return !!r.can_codex;
+      if (bizKey === 'grok') return !!r.can_grok;
+      if (bizKey === 'claude') return !!r.can_claude;
+      return false;
+    });
+    return rows.map(r => `${r.email}----${r.password}----${r.client_id}----${r.refresh_token}`);
+  }
+
+  const BIZ_LABEL_MAP = {
+    codex: '一_可注册Codex',
+    grok: '二_可注册Grok',
+    claude: '三_可注册Claude'
+  };
+
+  document.querySelectorAll('[data-biz-copy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bizKey = btn.dataset.bizCopy;
+      const lines = getBizLines(bizKey);
+      if (!lines.length) {
+        toast('当前条件下没有符合该业务的可用邮箱');
+        return;
+      }
+      navigator.clipboard.writeText(lines.join('\n')).then(() => {
+        toast(`📋 已复制 ${lines.length} 条【${BIZ_LABEL_MAP[bizKey]}】卡密到剪贴板！`);
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-biz-export]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bizKey = btn.dataset.bizExport;
+      const lines = getBizLines(bizKey);
+      if (!lines.length) {
+        toast('当前条件下没有符合该业务的可用邮箱');
+        return;
+      }
+      const batchSuffix = $('filterBatch').value ? `_${$('filterBatch').value}` : '';
+      const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${BIZ_LABEL_MAP[bizKey]}${batchSuffix}_${lines.length}个.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast(`📥 已导出 ${lines.length} 条【${BIZ_LABEL_MAP[bizKey]}】卡密 TXT`);
     });
   });
 
@@ -1082,7 +1302,7 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
     $('filterStatus').value = '';
     $('filterBatch').value = '';
     state.activeServiceFilter = '';
-    document.querySelectorAll('.stat').forEach(c => c.classList.remove('active-filter'));
+    document.querySelectorAll('.stat, .biz-card').forEach(c => c.classList.remove('active-filter'));
     document.querySelector('.stat[data-status-filter=""]').classList.add('active-filter');
     renderAll();
   });
@@ -1428,13 +1648,16 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
       toast('没有可导出的记录');
       return;
     }
-    const headers = ['邮箱地址', '批次号', '审查分类', '能否注册业务', '已注册服务', '风险与翻新证据', '前身别名', '历史邮件数', '最早邮件时间', '最新邮件时间', '备注'];
+    const headers = ['邮箱地址', '批次号', '审查分类', '一、可注册Codex', '二、可注册Grok', '三、可注册Claude', '当前地址已注服务', '母箱其他别名服务', '风险与翻新证据', '前身别名', '历史邮件数', '最早邮件时间', '最新邮件时间', '备注'];
     const rows = state.mailboxes.map(r => [
       r.email,
       r.batch_no,
       (STATUS_META[r.audit_status] || [r.audit_status])[0],
-      r.can_register_target ? '可注册' : '不可注册',
-      (r.registered_services || []).join(' | '),
+      r.can_codex ? (r.codex_status === 'alias_ok' ? '可注册(子别名)' : '可注册(干净)') : '不可注册',
+      r.can_grok ? (r.grok_status === 'alias_ok' ? '可注册(子别名)' : '可注册(干净)') : '不可注册',
+      r.can_claude ? (r.claude_status === 'alias_ok' ? '可注册(子别名)' : '可注册(干净)') : '不可注册',
+      (r.own_services || r.registered_services || []).join(' | '),
+      (r.alias_services || []).join(' | '),
       (r.risk_flags || []).join(' | '),
       (r.former_aliases || []).join(' | '),
       r.msg_count || 0,
