@@ -1678,6 +1678,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        if path.startswith("/mail-sieve"):
+            path = path[len("/mail-sieve"):] or "/"
 
         if path in ("/", "/index.html", "/hotmail-dashboard.html"):
             if DASHBOARD_HTML_PATH.is_file():
@@ -1732,6 +1734,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        if path.startswith("/mail-sieve"):
+            path = path[len("/mail-sieve"):] or "/"
         body = self._read_json_body()
 
         try:
