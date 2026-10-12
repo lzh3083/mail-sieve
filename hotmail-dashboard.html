@@ -1,0 +1,1471 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hotmail / Outlook 邮箱获取与深度取证审查面板</title>
+<style>
+:root {
+  --bg: #f3f6fb;
+  --panel: #ffffff;
+  --text: #141c2b;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --blue: #2563eb;
+  --blue-soft: #eff6ff;
+  --green: #059669;
+  --green-soft: #ecfdf5;
+  --amber: #d97706;
+  --amber-soft: #fffbeb;
+  --orange: #ea580c;
+  --orange-soft: #fff7ed;
+  --red: #dc2626;
+  --red-soft: #fef2f2;
+  --gray: #475569;
+  --gray-soft: #f1f5f9;
+  --shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  font: 13.5px/1.55 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; }
+.shell { max-width: 1440px; margin: 0 auto; padding: 24px 22px 60px; }
+
+/* Header */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.brand { display: flex; gap: 14px; align-items: center; }
+.logo {
+  height: 46px; width: 46px; border-radius: 13px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff; display: grid; place-items: center;
+  font-size: 21px; font-weight: 800;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+}
+.eyebrow {
+  font-size: 11px; color: var(--blue); font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+.conn-dot {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 99px; font-size: 11px;
+  background: var(--green-soft); color: var(--green); font-weight: 600;
+}
+.conn-dot.off { background: var(--red-soft); color: var(--red); }
+.title { font-size: 22px; font-weight: 760; letter-spacing: -.02em; margin: 2px 0; }
+.sub { color: var(--muted); font-size: 13px; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: #1e293b;
+  padding: 8px 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: .15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: #94a3b8; background: #f8fafc; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.primary {
+  color: #fff; background: var(--blue); border-color: var(--blue);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
+}
+.btn.primary:hover { background: #1d4ed8; }
+.btn.success {
+  color: #fff; background: var(--green); border-color: var(--green);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.22);
+}
+.btn.success:hover { background: #047857; }
+.btn.warn {
+  color: #9a3412; background: var(--orange-soft); border-color: #fed7aa;
+}
+.btn.warn:hover { background: #ffedd5; }
+.btn.sm { padding: 5px 9px; font-size: 12px; border-radius: 7px; }
+
+/* Two-Step Workflow Grid */
+.workflow-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+}
+.step-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 12px; padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.step-title {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 15px; font-weight: 700;
+}
+.step-num {
+  background: var(--blue); color: #fff;
+  width: 24px; height: 24px; border-radius: 7px;
+  display: inline-grid; place-items: center;
+  font-size: 12px; font-weight: 800;
+}
+.step-num.s2 { background: var(--green); }
+
+/* Tabs */
+.tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.tab-btn {
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.tab-btn.active {
+  background: var(--blue-soft);
+  border-color: #93c5fd;
+  color: var(--blue);
+}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 11.5px; font-weight: 650; color: #475569; }
+.control {
+  height: 35px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 10px;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+}
+.control:focus, textarea.control:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: vertical; }
+
+/* Progress bar */
+.progress-box {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 14px;
+  margin-top: 10px;
+}
+.progress-bar-bg {
+  height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 7px 0;
+}
+.progress-bar-fill {
+  height: 100%; background: linear-gradient(90deg, var(--blue), var(--green));
+  width: 0%; transition: width .25s ease;
+}
+
+/* Stats Grid */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 15px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: .15s;
+}
+.stat:hover { transform: translateY(-2px); border-color: #93c5fd; }
+.stat.active-filter { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }
+.stat-label { color: var(--muted); font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
+.stat-num { font-size: 24px; font-weight: 780; margin: 4px 0 2px; letter-spacing: -.03em; }
+.stat-note { font-size: 11px; color: var(--muted); }
+
+/* Service Tag Cloud */
+.svc-bar {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 15px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.svc-chip {
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: #334155;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .15s;
+}
+.svc-chip:hover, .svc-chip.active {
+  background: var(--blue-soft);
+  border-color: #60a5fa;
+  color: var(--blue);
+}
+
+/* Filter Toolbar */
+.toolbar {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.search { position: relative; flex: 1; min-width: 220px; }
+.search input { padding-left: 32px; }
+.search span { position: absolute; left: 10px; top: 7px; color: #94a3b8; font-size: 15px; }
+
+/* Table */
+.table-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+.table { width: 100%; border-collapse: collapse; min-width: 1120px; }
+.table th {
+  text-align: left;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+.table tbody tr:hover { background: #f8fafc; }
+
+/* Badges & Tags */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 700;
+  white-space: nowrap;
+}
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.st-clean_ready { color: var(--green); background: var(--green-soft); }
+.st-other_services_only { color: var(--amber); background: var(--amber-soft); }
+.st-target_registered { color: var(--orange); background: var(--orange-soft); }
+.st-blacklisted_recycled { color: var(--red); background: var(--red-soft); }
+.st-auth_failed { color: var(--gray); background: var(--gray-soft); }
+.st-pending { color: var(--blue); background: var(--blue-soft); }
+
+.tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 2px 4px 2px 0;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+.tag.openai { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.tag.risk { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.tag.alias { background: #faf5ff; color: #7e22ce; border-color: #e9d5ff; }
+.tag.ok { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+
+.can-reg-yes {
+  color: var(--green); font-weight: 700; font-size: 12.5px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.can-reg-no {
+  color: var(--red); font-weight: 700; font-size: 12.5px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* Modals */
+.overlay {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+  display: none; align-items: center; justify-content: center;
+  padding: 18px; z-index: 50;
+}
+.overlay.open { display: flex; }
+.modal {
+  width: min(880px, 100%);
+  max-height: 88vh;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 25px 70px rgba(15, 23, 42, 0.35);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+}
+.modal-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 14px;
+}
+.modal-head h2 { margin: 0; font-size: 17px; }
+.modal-body { overflow-y: auto; flex: 1; padding-right: 4px; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding-top: 14px; border-top: 1px solid var(--line); margin-top: 14px;
+}
+
+.mail-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 14px;
+  margin-bottom: 10px;
+  background: #f8fafc;
+}
+.mail-item-top {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 12px; color: var(--muted); margin-bottom: 4px;
+}
+.mail-subj { font-weight: 700; color: var(--text); font-size: 13.5px; margin-bottom: 4px; }
+.mail-snip { font-size: 12px; color: #475569; word-break: break-word; }
+
+.empty { text-align: center; padding: 54px 16px; color: var(--muted); }
+.toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 20px);
+  background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px;
+  opacity: 0; transition: .2s; pointer-events: none; z-index: 100; font-weight: 600;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 1024px) {
+  .workflow-grid { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <!-- 顶部标题栏 -->
+  <header class="top">
+    <div class="brand">
+      <div class="logo">@</div>
+      <div>
+        <div class="eyebrow">
+          <span>HOTMAIL / OUTLOOK FORENSIC &amp; INVENTORY</span>
+          <span class="conn-dot" id="backendStatus">● 审查引擎已连接</span>
+        </div>
+        <h1 class="title">Hotmail 购买邮箱自动获取与深度审查面板</h1>
+        <div class="sub">一、从指定收货邮箱自动拉取购买卡密 · 二、并发扫描收件箱历史邮件，精准识别已注册服务、封号黑历史与改别名翻新</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn warn" id="btnForensicReport">📑 生成维权取证报告</button>
+      <button class="btn success" id="btnSyncToPool">🚀 同步可用邮箱至注册机池</button>
+      <button class="btn" id="btnExportUsableTxt">📥 导出可用卡密 TXT</button>
+      <button class="btn" id="btnExportCsv">📊 导出完整台账 CSV</button>
+    </div>
+  </header>
+
+  <!-- 核心两步工作流区 -->
+  <section class="workflow-grid">
+    <!-- 第一步：从指定邮箱获取购买的邮箱信息 -->
+    <div class="card">
+      <div class="step-head">
+        <div class="step-title">
+          <span class="step-num">1</span>
+          <span>第一步：从指定邮箱获取购买的邮箱信息</span>
+        </div>
+        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px">
+          <input type="checkbox" id="chkAutoAudit" checked> 获取后自动执行审查
+        </label>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-imap">📨 指定 IMAP 收货邮箱拉取</button>
+        <button class="tab-btn" data-tab="tab-oauth">🔑 指定 Outlook(OAuth2) 拉取</button>
+        <button class="tab-btn" data-tab="tab-cf">☁️ Cloudflare 临时邮箱拉取</button>
+        <button class="tab-btn" data-tab="tab-paste">📋 粘贴卡密 / 同步本地邮箱池</button>
+      </div>
+
+      <!-- Tab 1: IMAP 收货邮箱 -->
+      <div class="tab-pane active" id="tab-imap">
+        <div class="form-row">
+          <div class="field">
+            <label>收货邮箱地址（接收发卡/订单的邮箱）</label>
+            <input class="control" id="srcImapEmail" placeholder="如 123456@qq.com / xxx@163.com">
+          </div>
+          <div class="field">
+            <label>IMAP 授权码 / 密码</label>
+            <input class="control" id="srcImapPassword" type="password" placeholder="邮箱密码或 16 位授权码">
+          </div>
+          <div class="field">
+            <label>IMAP 服务器与端口</label>
+            <div style="display:flex;gap:6px">
+              <input class="control" id="srcImapServer" placeholder="imap.qq.com" style="flex:1">
+              <input class="control" id="srcImapPort" type="number" value="993" style="width:74px">
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>发货邮件过滤关键词（选填）</label>
+            <input class="control" id="srcSearchKeyword" placeholder="留空扫描全部，可填 hotmail / 发货 / 订单">
+          </div>
+          <div class="field">
+            <label>归属批次号（选填，不填自动识别订单号）</label>
+            <input class="control" id="srcBatchNo" placeholder="例如：第4批_LD261012ZL1T6Q">
+          </div>
+          <div class="field">
+            <label>扫描最近邮件数 &amp; 操作</label>
+            <div style="display:flex;gap:6px">
+              <input class="control" id="srcMaxMails" type="number" value="30" style="width:76px">
+              <button class="btn primary" id="btnFetchImap" style="flex:1;justify-content:center">📨 连接邮箱并提取购买卡密</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Outlook OAuth2 收货邮箱 -->
+      <div class="tab-pane" id="tab-oauth">
+        <div class="field" style="margin-bottom:10px">
+          <label>收货 Outlook/Hotmail 完整卡密行（自动解析 email----password----client_id----refresh_token）</label>
+          <input class="control mono" id="srcOauthLine" placeholder="粘贴用于收件的 Outlook 卡密：email----password----client_id----refresh_token">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--muted)">通过 Microsoft OAuth2 / Live IMAP 直连该收货邮箱，提取里面收到的购买邮箱列表与附件。</span>
+          <button class="btn primary" id="btnFetchOauth">🔑 从该 Outlook 邮箱拉取</button>
+        </div>
+      </div>
+
+      <!-- Tab 3: Cloudflare 临时邮箱 -->
+      <div class="tab-pane" id="tab-cf">
+        <div class="form-row">
+          <div class="field">
+            <label>Cloudflare Worker API 地址</label>
+            <input class="control" id="srcCfBase" value="https://apimail.jgxjs.com">
+          </div>
+          <div class="field">
+            <label>Admin 密钥 (x-admin-auth)</label>
+            <input class="control" id="srcCfKey" type="password" placeholder="Admin Password">
+          </div>
+          <div class="field">
+            <label>指定收件邮箱地址（选填）</label>
+            <div style="display:flex;gap:6px">
+              <input class="control" id="srcCfAddr" placeholder="留空拉取全部收件">
+              <button class="btn primary" id="btnFetchCf">☁️ 拉取</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: 批量粘贴 / 本地工作区同步 -->
+      <div class="tab-pane" id="tab-paste">
+        <textarea class="control mono" id="pasteText" placeholder="每行一条购买的卡密，支持 4/5/6 段格式：&#10;email----password----client_id----refresh_token&#10;也支持直接粘贴整封发货邮件内容或上传 .txt/.csv 文件"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="control" id="pasteBatchNo" placeholder="批次名称（如：第5批）" style="width:165px;height:32px">
+            <label class="btn sm" style="cursor:pointer">
+              📂 选择文件导入 <input type="file" id="fileUploadInput" accept=".txt,.csv,.log,.json" hidden>
+            </label>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn sm" id="btnSyncWorkspace">⚡ 从当前工作区邮箱池同步 (用于注册的邮箱.txt)</button>
+            <button class="btn primary sm" id="btnImportPaste">＋ 导入并解析</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第二步：对获取的邮箱进行深度审查与分类 -->
+    <div class="card">
+      <div class="step-head">
+        <div class="step-title">
+          <span class="step-num s2">2</span>
+          <span>第二步：自动审查历史邮件 &amp; 业务可用性分类</span>
+        </div>
+        <span class="mono" style="font-size:11.5px;color:var(--muted)" id="auditEngineHint">OAuth2 + IMAP XOAUTH2 + Graph</span>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>拟用于注册的目标业务（决定“能否注册”判定标准）</label>
+          <select class="control" id="targetServiceSelect">
+            <option value="openai">OpenAI / ChatGPT / Codex（默认）</option>
+            <option value="grok">xAI / Grok</option>
+            <option value="claude">Anthropic / Claude</option>
+            <option value="cursor">Cursor</option>
+            <option value="x_twitter">X (Twitter)</option>
+            <option value="strict_clean">严苛纯白模式（有任何第三方邮件均不可用）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>按批次审查</label>
+          <select class="control" id="auditBatchSelect">
+            <option value="">全部批次</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn primary" id="btnAuditAll" style="flex:1;justify-content:center">🔍 深度审查全部邮箱</button>
+        <button class="btn" id="btnAuditPending" style="flex:1;justify-content:center">⚡ 仅审查待审邮箱</button>
+      </div>
+
+      <div class="progress-box" id="auditProgressBox">
+        <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600">
+          <span id="auditStatusText">就绪：点击上方按钮并发读取收件箱历史邮件进行取证</span>
+          <span class="mono" id="auditProgressCounter">0 / 0</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="auditProgressBar"></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--muted)">
+          自动核查：① Token/IMAP 存活 ② 前身别名翻新 (Alias-Recycled) ③ OpenAI 封号/锁号黑历史 ④ 已注册过的服务清单
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6张核心分类统计卡片（点击可筛选） -->
+  <section class="stats">
+    <div class="stat active-filter" data-status-filter="">
+      <div class="stat-label"><span>全部购买邮箱</span><span>📦</span></div>
+      <div class="stat-num" id="stTotal">0</div>
+      <div class="stat-note" id="stBatchNote">点击查看全部记录</div>
+    </div>
+    <div class="stat" data-status-filter="CAN_REGISTER">
+      <div class="stat-label"><span style="color:var(--green)">✅ 可用于注册业务</span><span>🎯</span></div>
+      <div class="stat-num" id="stCanReg" style="color:var(--green)">0</div>
+      <div class="stat-note">未注册目标业务且无封号/翻新</div>
+    </div>
+    <div class="stat" data-status-filter="clean_ready">
+      <div class="stat-label"><span>🟢 全新纯净邮箱</span><span>✨</span></div>
+      <div class="stat-num" id="stClean">0</div>
+      <div class="stat-note">0 第三方服务注册痕迹</div>
+    </div>
+    <div class="stat" data-status-filter="other_services_only">
+      <div class="stat-label"><span style="color:var(--amber)">🟡 曾注册其他服务</span><span>⚠️</span></div>
+      <div class="stat-num" id="stOther" style="color:var(--amber)">0</div>
+      <div class="stat-note">有其他网站邮件，但未注目标业务</div>
+    </div>
+    <div class="stat" data-status-filter="target_registered">
+      <div class="stat-label"><span style="color:var(--orange)">🟠 已注册目标业务</span><span>🚫</span></div>
+      <div class="stat-num" id="stRegistered" style="color:var(--orange)">0</div>
+      <div class="stat-note">收件箱已有 OpenAI/目标业务记录</div>
+    </div>
+    <div class="stat" data-status-filter="BAD_ALL">
+      <div class="stat-label"><span style="color:var(--red)">🔴 封号翻新 / ⚫ 死号</span><span>💀</span></div>
+      <div class="stat-num" id="stBad" style="color:var(--red)">0</div>
+      <div class="stat-note" id="stBadDetail">封号翻新 0 · Token失效 0</div>
+    </div>
+  </section>
+
+  <!-- 已识别到的历史注册服务标签云 -->
+  <section class="svc-bar" id="serviceBreakdownBar">
+    <span style="font-size:12px;font-weight:700;color:#475569">🔎 收件箱检出服务分布（点击过滤）：</span>
+    <span class="muted" style="font-size:12px">暂无数据</span>
+  </section>
+
+  <!-- 搜索与多维过滤工具栏 -->
+  <section class="toolbar">
+    <div class="search">
+      <span>⌕</span>
+      <input id="searchInput" class="control" placeholder="搜索邮箱地址、批次号、注册过的服务（如 OpenAI / 1040 / Cursor / X）、前身别名或邮件主题…">
+    </div>
+    <select id="filterStatus" class="control" style="width:185px">
+      <option value="">审查分类：全部</option>
+      <option value="CAN_REGISTER">✅ 可用于注册目标业务</option>
+      <option value="clean_ready">🟢 全新纯净 (0服务)</option>
+      <option value="other_services_only">🟡 仅注册过其他服务</option>
+      <option value="target_registered">🟠 已注册过目标业务</option>
+      <option value="blacklisted_recycled">🔴 封号黑历史 / 别名翻新</option>
+      <option value="auth_failed">⚫ 凭证失效 / 无法连接</option>
+      <option value="pending">⚪ 待审查</option>
+      <option value="BAD_ALL">🔴+⚫ 封号翻新与死号汇总</option>
+    </select>
+    <select id="filterBatch" class="control" style="width:165px">
+      <option value="">批次：全部批次</option>
+    </select>
+    <button class="btn" id="btnClearFilter">重置筛选</button>
+    <span class="mono" style="margin-left:auto;color:var(--muted)" id="visibleCountText">显示 0 / 0 条</span>
+  </section>
+
+  <!-- 邮箱审查结果主表格 -->
+  <section class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:230px">邮箱地址 / 批次 / 通道</th>
+          <th style="width:145px">审查分类</th>
+          <th style="width:130px">能否注册业务</th>
+          <th style="width:220px">收件箱已注册服务</th>
+          <th>风险取证 / 前身别名 / 最新邮件摘要</th>
+          <th style="width:110px">历史邮件</th>
+          <th style="width:155px">操作</th>
+        </tr>
+      </thead>
+      <tbody id="mailboxRows"></tbody>
+    </table>
+    <div class="empty" id="emptyState" hidden>
+      <div style="font-size:32px;margin-bottom:6px">📬</div>
+      <b style="font-size:15px;color:#1e293b;display:block;margin-bottom:4px">当前筛选条件下没有邮箱记录</b>
+      <span>请通过上方「第一步」从指定收货邮箱拉取、同步工作区邮箱池或粘贴导入卡密。</span>
+    </div>
+  </section>
+</main>
+
+<!-- 弹窗1：单邮箱 IMAP 原始历史邮件取证查看器 -->
+<div class="overlay" id="mailModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="mailModalTitle">收件箱历史邮件取证</h2>
+        <div id="mailModalSub" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button class="btn sm" data-close="mailModal">✕ 关闭</button>
+    </div>
+    <div class="modal-body" id="mailModalList"></div>
+    <div class="modal-foot">
+      <button class="btn" data-close="mailModal">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗2：号商翻新与黑历史维权取证报告 -->
+<div class="overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2>📑 邮箱资产深度审查与号商维权取证报告</h2>
+        <div style="font-size:12px;color:var(--muted)">自动汇总历史邮件轨迹、已注册服务、OpenAI封号/锁号记录、前身别名与失效死号，可直接复制发送给号商售后</div>
+      </div>
+      <button class="btn sm" data-close="reportModal">✕ 关闭</button>
+    </div>
+    <div class="modal-body">
+      <textarea class="control mono" id="reportTextarea" style="min-height:420px;font-size:12.5px;line-height:1.5" readonly></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="btnDownloadReport">📥 下载 Markdown 报告 (.md)</button>
+      <button class="btn primary" id="btnCopyReport">📋 一键复制完整取证报告</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗3：编辑邮箱备注与分类 -->
+<div class="overlay" id="editModal">
+  <div class="modal" style="width:min(520px,100%)">
+    <div class="modal-head">
+      <h2 id="editModalTitle">编辑邮箱信息</h2>
+      <button class="btn sm" data-close="editModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editEmailHidden">
+      <div class="form-row" style="grid-template-columns:1fr 1fr">
+        <div class="field">
+          <label>归属批次号</label>
+          <input class="control" id="editBatchNo">
+        </div>
+        <div class="field">
+          <label>用途 / 分组</label>
+          <input class="control" id="editPurpose" placeholder="如：ChatGPT主力池 / 售后退货">
+        </div>
+      </div>
+      <div class="form-row" style="grid-template-columns:1fr 1fr">
+        <div class="field">
+          <label>人工覆写审查状态</label>
+          <select class="control" id="editAuditStatus">
+            <option value="clean_ready">🟢 全新纯净</option>
+            <option value="other_services_only">🟡 仅注册过其他服务</option>
+            <option value="target_registered">🟠 已注册目标业务</option>
+            <option value="blacklisted_recycled">🔴 封号黑历史 / 别名翻新</option>
+            <option value="auth_failed">⚫ 凭证失效 / 死号</option>
+            <option value="pending">⚪ 待审查</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>能否用于注册目标业务</label>
+          <select class="control" id="editCanReg">
+            <option value="1">✅ 可用于注册</option>
+            <option value="0">❌ 不可用于注册</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>人工备注</label>
+        <textarea class="control" id="editNotes" placeholder="填写备注说明..."></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="editModal">取消</button>
+      <button class="btn primary" id="btnSaveEdit">保存修改</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  const API_BASE = (location.protocol === 'file:' || location.port === '3080')
+    ? 'http://127.0.0.1:8899'
+    : location.pathname.replace(/\/(?:index\.html|hotmail-dashboard\.html)?$/, '');
+
+  const STATUS_META = {
+    clean_ready: ['🟢 全新纯净', 'st-clean_ready'],
+    other_services_only: ['🟡 仅注其他服务', 'st-other_services_only'],
+    target_registered: ['🟠 已注目标业务', 'st-target_registered'],
+    blacklisted_recycled: ['🔴 封号/别名翻新', 'st-blacklisted_recycled'],
+    auth_failed: ['⚫ 凭证失效/死号', 'st-auth_failed'],
+    pending: ['⚪ 待审查', 'st-pending']
+  };
+
+  const COMMON_IMAP = {
+    'qq.com': ['imap.qq.com', 993],
+    'foxmail.com': ['imap.qq.com', 993],
+    '163.com': ['imap.163.com', 993],
+    '126.com': ['imap.126.com', 993],
+    'yeah.net': ['imap.yeah.net', 993],
+    'gmail.com': ['imap.gmail.com', 993],
+    'outlook.com': ['outlook.office365.com', 993],
+    'hotmail.com': ['outlook.office365.com', 993],
+    'live.com': ['outlook.office365.com', 993]
+  };
+
+  let state = {
+    mailboxes: [],
+    summary: {},
+    audit_progress: {},
+    activeServiceFilter: ''
+  };
+  let pollTimer = null;
+
+  const $ = id => document.getElementById(id);
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function toast(msg, duration = 2600) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(API_BASE + path, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    const data = await res.json();
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || ('请求失败 HTTP ' + res.status));
+    }
+    return data;
+  }
+
+  // Tab 切换
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // 自动根据收货邮箱后缀补全 IMAP 服务器
+  $('srcImapEmail').addEventListener('input', e => {
+    const val = e.target.value.trim().toLowerCase();
+    if (val.includes('@') && !val.includes('----')) {
+      const dom = val.split('@').pop();
+      if (COMMON_IMAP[dom]) {
+        $('srcImapServer').value = COMMON_IMAP[dom][0];
+        $('srcImapPort').value = COMMON_IMAP[dom][1];
+      }
+    }
+  });
+
+  // 加载全量状态
+  async function loadState(populateConfig = false) {
+    try {
+      const data = await api('/api/state');
+      state.mailboxes = data.mailboxes || [];
+      state.summary = data.summary || {};
+      state.audit_progress = data.audit_progress || {};
+      $('backendStatus').textContent = '● 审查引擎在线';
+      $('backendStatus').classList.remove('off');
+
+      if (populateConfig && data.source_config) {
+        const sc = data.source_config;
+        if (sc.email) $('srcImapEmail').value = sc.email;
+        if (sc.imap_server) $('srcImapServer').value = sc.imap_server;
+        if (sc.imap_port) $('srcImapPort').value = sc.imap_port;
+        if (sc.cf_api_base) $('srcCfBase').value = sc.cf_api_base;
+        if (sc.search_keyword) $('srcSearchKeyword').value = sc.search_keyword;
+      }
+
+      renderAll();
+      if (state.audit_progress.running) {
+        startAuditPolling();
+      }
+    } catch (err) {
+      $('backendStatus').textContent = '● 后端未连接 (请运行 hotmail_manager_server.py)';
+      $('backendStatus').classList.add('off');
+    }
+  }
+
+  function startAuditPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(async () => {
+      try {
+        const res = await api('/api/audit-status');
+        state.audit_progress = res.audit_progress || {};
+        state.summary = res.summary || state.summary;
+        renderProgress();
+        if (!state.audit_progress.running) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          await loadState(false);
+          toast('✅ 邮箱深度取证审查已完成！');
+        }
+      } catch (_) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }, 1000);
+  }
+
+  function renderProgress() {
+    const p = state.audit_progress || {};
+    const total = p.total || 0;
+    const done = p.completed || 0;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    $('auditProgressCounter').textContent = `${done} / ${total} (${pct}%)`;
+    $('auditProgressBar').style.width = `${pct}%`;
+    if (p.running) {
+      $('auditStatusText').textContent = `⏳ 正在并发审查收件箱: ${p.current_email || '...'}`;
+      $('btnAuditAll').disabled = true;
+      $('btnAuditPending').disabled = true;
+    } else {
+      $('auditStatusText').textContent = total > 0
+        ? `✅ 最近一次审查已完成（共核查 ${total} 个邮箱）`
+        : '就绪：点击上方按钮并发读取收件箱历史邮件进行取证';
+      $('btnAuditAll').disabled = false;
+      $('btnAuditPending').disabled = false;
+    }
+  }
+
+  function renderAll() {
+    const s = state.summary || {};
+    $('stTotal').textContent = s.total || 0;
+    $('stCanReg').textContent = s.can_register_count || 0;
+    $('stClean').textContent = s.clean_ready || 0;
+    $('stOther').textContent = s.other_services_only || 0;
+    $('stRegistered').textContent = s.target_registered || 0;
+    const badTotal = (s.blacklisted_recycled || 0) + (s.auth_failed || 0);
+    $('stBad').textContent = badTotal;
+    $('stBadDetail').textContent = `封号翻新 ${s.blacklisted_recycled || 0} · Token失效 ${s.auth_failed || 0}`;
+    $('stBatchNote').textContent = `共 ${(s.batches || []).length || 1} 个批次`;
+
+    // 更新批次下拉框
+    const batches = s.batches || [];
+    const curFilterBatch = $('filterBatch').value;
+    const curAuditBatch = $('auditBatchSelect').value;
+    $('filterBatch').innerHTML = '<option value="">批次：全部批次</option>' +
+      batches.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+    $('auditBatchSelect').innerHTML = '<option value="">全部批次</option>' +
+      batches.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+    $('filterBatch').value = curFilterBatch;
+    $('auditBatchSelect').value = curAuditBatch;
+
+    // 渲染服务分布标签云
+    const breakdown = s.service_breakdown || {};
+    const svcEntries = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+    const bar = $('serviceBreakdownBar');
+    if (svcEntries.length === 0) {
+      bar.innerHTML = '<span style="font-size:12px;font-weight:700;color:#475569">🔎 收件箱检出服务分布：</span><span style="font-size:12px;color:var(--muted)">暂无检出记录</span>';
+    } else {
+      bar.innerHTML = '<span style="font-size:12px;font-weight:700;color:#475569">🔎 收件箱检出服务分布（点击筛选）：</span>' +
+        `<span class="svc-chip ${state.activeServiceFilter === '' ? 'active' : ''}" data-svc="">全部 (${s.total || 0})</span>` +
+        svcEntries.map(([svc, cnt]) =>
+          `<span class="svc-chip ${state.activeServiceFilter === svc ? 'active' : ''}" data-svc="${esc(svc)}">${esc(svc)} <b>${cnt}</b></span>`
+        ).join('');
+    }
+
+    renderProgress();
+    renderTable();
+  }
+
+  function renderTable() {
+    const q = $('searchInput').value.trim().toLowerCase();
+    const stFilter = $('filterStatus').value;
+    const batchFilter = $('filterBatch').value;
+    const svcFilter = state.activeServiceFilter;
+
+    const filtered = state.mailboxes.filter(r => {
+      if (stFilter === 'CAN_REGISTER' && !r.can_register_target) return false;
+      else if (stFilter === 'BAD_ALL' && !['blacklisted_recycled', 'auth_failed'].includes(r.audit_status)) return false;
+      else if (stFilter && !['CAN_REGISTER', 'BAD_ALL'].includes(stFilter) && r.audit_status !== stFilter) return false;
+
+      if (batchFilter && r.batch_no !== batchFilter) return false;
+      if (svcFilter && !(r.registered_services || []).includes(svcFilter)) return false;
+
+      if (q) {
+        const hay = [
+          r.email, r.batch_no, r.purpose, r.notes, r.auth_error,
+          ...(r.registered_services || []),
+          ...(r.risk_flags || []),
+          ...(r.former_aliases || []),
+          ...(r.messages_sample || []).map(m => m.subject + ' ' + m.from)
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    $('visibleCountText').textContent = `显示 ${filtered.length} / ${state.mailboxes.length} 条`;
+    $('emptyState').hidden = filtered.length > 0;
+
+    $('mailboxRows').innerHTML = filtered.map(r => {
+      const [stLabel, stClass] = STATUS_META[r.audit_status] || STATUS_META.pending;
+      const svcs = r.registered_services || [];
+      const risks = r.risk_flags || [];
+      const aliases = r.former_aliases || [];
+      const samples = r.messages_sample || [];
+
+      const svcHtml = svcs.length
+        ? svcs.map(s => `<span class="tag ${s.includes('OpenAI') ? 'openai' : ''}">${esc(s)}</span>`).join('')
+        : (r.audit_status === 'auth_failed'
+            ? '<span style="color:var(--muted);font-size:12px">无法读取</span>'
+            : '<span class="tag ok">未发现注册记录</span>');
+
+      let canRegHtml = '';
+      if (r.audit_status === 'pending') {
+        canRegHtml = '<span style="color:var(--muted);font-size:12px">待审查</span>';
+      } else if (r.can_register_target) {
+        canRegHtml = `<div class="can-reg-yes">✅ 可用于注册</div><div style="font-size:11px;color:var(--muted)">${r.audit_status === 'clean_ready' ? '全新无痕迹' : '未注目标业务'}</div>`;
+      } else {
+        const reasonShort = r.audit_status === 'target_registered'
+          ? '已注册过该业务'
+          : r.audit_status === 'blacklisted_recycled'
+            ? '封号/翻新黑历史'
+            : '凭证失效/不可连';
+        canRegHtml = `<div class="can-reg-no">❌ 不可注册</div><div style="font-size:11px;color:var(--muted)">${reasonShort}</div>`;
+      }
+
+      const aliasHtml = aliases.length
+        ? `<div style="margin-bottom:3px"><span class="tag alias">前身别名: ${esc(aliases.join(', '))}</span></div>`
+        : '';
+
+      const riskHtml = risks.length
+        ? `<div>${risks.map(f => `<span class="tag risk">${esc(f)}</span>`).join('')}</div>`
+        : '';
+
+      const latestMailHtml = samples.length
+        ? `<div style="font-size:11.5px;color:#475569;margin-top:3px">📩 最新: <b>${esc(samples[0].subject)}</b> <span style="color:var(--muted)">(${esc(samples[0].date)})</span></div>`
+        : '';
+
+      const channelBadge = r.auth_channel
+        ? `<span class="mono" style="font-size:11px;padding:1px 6px;border-radius:4px;background:#f1f5f9;color:#475569">${esc(r.auth_channel)}</span>`
+        : '';
+
+      return `<tr>
+        <td>
+          <div style="font-weight:700;color:#0f172a;word-break:break-all">${esc(r.email)}</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--muted);background:#f8fafc;border:1px solid var(--line);padding:1px 6px;border-radius:4px">${esc(r.batch_no || '默认批次')}</span>
+            ${channelBadge}
+            ${r.purpose ? `<span style="font-size:11px;color:var(--blue)">#${esc(r.purpose)}</span>` : ''}
+          </div>
+        </td>
+        <td>
+          <span class="badge ${stClass}">${stLabel}</span>
+          ${r.last_audited_at ? `<div class="mono" style="font-size:10.5px;color:var(--muted);margin-top:4px">${esc(r.last_audited_at.replace('T', ' ').slice(5, 16))}</div>` : ''}
+        </td>
+        <td>${canRegHtml}</td>
+        <td>${svcHtml}</td>
+        <td>
+          ${aliasHtml}
+          ${riskHtml}
+          ${latestMailHtml}
+          ${r.notes ? `<div style="font-size:11.5px;color:var(--blue);margin-top:3px">📝 备注: ${esc(r.notes)}</div>` : ''}
+        </td>
+        <td>
+          <div style="font-weight:700;font-size:13px">${r.msg_count || 0} 封</div>
+          ${r.earliest_msg_date ? `<div class="mono" style="font-size:10.5px;color:var(--muted)">${esc(r.earliest_msg_date.slice(0, 10))}<br>~ ${esc(r.latest_msg_date.slice(0, 10))}</div>` : '<span style="font-size:11px;color:var(--muted)">—</span>'}
+        </td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn sm" data-view-mails="${esc(r.email)}" title="查看收件箱历史邮件取证">📬 邮件(${samples.length})</button>
+            <button class="btn sm" data-reaudit="${esc(r.email)}" title="重新连接审查此邮箱">🔄</button>
+            <button class="btn sm" data-copy="${esc(r.email)}" title="复制完整卡密">📋</button>
+            <button class="btn sm" data-edit="${esc(r.email)}" title="编辑备注/状态">✏️</button>
+            <button class="btn sm" data-del="${esc(r.email)}" title="删除" style="color:var(--red)">🗑</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // 点击统计卡片快速过滤
+  document.querySelectorAll('.stat[data-status-filter]').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.stat').forEach(c => c.classList.remove('active-filter'));
+      card.classList.add('active-filter');
+      $('filterStatus').value = card.dataset.statusFilter;
+      renderTable();
+    });
+  });
+
+  // 点击服务标签云过滤
+  $('serviceBreakdownBar').addEventListener('click', e => {
+    const chip = e.target.closest('[data-svc]');
+    if (!chip) return;
+    state.activeServiceFilter = chip.dataset.svc;
+    renderAll();
+  });
+
+  ['searchInput', 'filterStatus', 'filterBatch'].forEach(id => {
+    $(id).addEventListener('input', renderTable);
+  });
+
+  $('btnClearFilter').addEventListener('click', () => {
+    $('searchInput').value = '';
+    $('filterStatus').value = '';
+    $('filterBatch').value = '';
+    state.activeServiceFilter = '';
+    document.querySelectorAll('.stat').forEach(c => c.classList.remove('active-filter'));
+    document.querySelector('.stat[data-status-filter=""]').classList.add('active-filter');
+    renderAll();
+  });
+
+  // 第一步操作：IMAP 拉取
+  $('btnFetchImap').addEventListener('click', async () => {
+    const btn = $('btnFetchImap');
+    btn.disabled = true;
+    const origText = btn.textContent;
+    btn.textContent = '⏳ 正在连接收货邮箱拉取...';
+    try {
+      const res = await api('/api/fetch-from-source', {
+        method: 'POST',
+        body: {
+          protocol: 'imap',
+          email: $('srcImapEmail').value.trim(),
+          password: $('srcImapPassword').value.trim(),
+          imap_server: $('srcImapServer').value.trim(),
+          imap_port: Number($('srcImapPort').value || 993),
+          search_keyword: $('srcSearchKeyword').value.trim(),
+          batch_no: $('srcBatchNo').value.trim(),
+          max_mails: Number($('srcMaxMails').value || 30),
+          auto_audit: $('chkAutoAudit').checked,
+          target_service: $('targetServiceSelect').value
+        }
+      });
+      toast(`✅ 扫描 ${res.scanned_mail_count} 封邮件，提取 ${res.extracted_count} 个邮箱（新增 ${res.inserted}，更新 ${res.updated}）`);
+      await loadState(false);
+    } catch (err) {
+      toast('❌ 拉取失败: ' + err.message, 4000);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
+  });
+
+  // 第一步操作：Outlook OAuth2 收货邮箱拉取
+  $('btnFetchOauth').addEventListener('click', async () => {
+    const line = $('srcOauthLine').value.trim();
+    if (!line) {
+      toast('请先粘贴收货 Outlook 邮箱的卡密');
+      return;
+    }
+    const btn = $('btnFetchOauth');
+    btn.disabled = true;
+    try {
+      const res = await api('/api/fetch-from-source', {
+        method: 'POST',
+        body: {
+          protocol: 'outlook_oauth',
+          email: line,
+          batch_no: $('srcBatchNo').value.trim(),
+          max_mails: Number($('srcMaxMails').value || 30),
+          auto_audit: $('chkAutoAudit').checked,
+          target_service: $('targetServiceSelect').value
+        }
+      });
+      toast(`✅ 从 Outlook 收货箱扫描 ${res.scanned_mail_count} 封邮件，提取 ${res.extracted_count} 个邮箱`);
+      await loadState(false);
+    } catch (err) {
+      toast('❌ 拉取失败: ' + err.message, 4000);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // 第一步操作：Cloudflare 临时邮箱拉取
+  $('btnFetchCf').addEventListener('click', async () => {
+    const btn = $('btnFetchCf');
+    btn.disabled = true;
+    try {
+      const res = await api('/api/fetch-from-source', {
+        method: 'POST',
+        body: {
+          protocol: 'cf_worker',
+          cf_api_base: $('srcCfBase').value.trim(),
+          cf_api_key: $('srcCfKey').value.trim(),
+          cf_address: $('srcCfAddr').value.trim(),
+          batch_no: $('srcBatchNo').value.trim(),
+          max_mails: Number($('srcMaxMails').value || 30),
+          auto_audit: $('chkAutoAudit').checked,
+          target_service: $('targetServiceSelect').value
+        }
+      });
+      toast(`✅ 从 CF 邮箱扫描 ${res.scanned_mail_count} 封邮件，提取 ${res.extracted_count} 个邮箱`);
+      await loadState(false);
+    } catch (err) {
+      toast('❌ 拉取失败: ' + err.message, 4000);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // 第一步操作：粘贴导入 & 文件上传 & 工作区同步
+  $('fileUploadInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    $('pasteText').value = text;
+    if (!$('pasteBatchNo').value) {
+      $('pasteBatchNo').value = file.name.replace(/\.[^.]+$/, '');
+    }
+    toast(`📂 已读取文件 ${file.name}，点击「导入并解析」即可入库`);
+  });
+
+  $('btnImportPaste').addEventListener('click', async () => {
+    const text = $('pasteText').value.trim();
+    if (!text) {
+      toast('请先粘贴邮箱卡密或邮件内容');
+      return;
+    }
+    try {
+      const res = await api('/api/import-text', {
+        method: 'POST',
+        body: {
+          text,
+          batch_no: $('pasteBatchNo').value.trim() || '手动导入批次',
+          auto_audit: $('chkAutoAudit').checked,
+          target_service: $('targetServiceSelect').value
+        }
+      });
+      $('pasteText').value = '';
+      toast(`✅ 成功解析 ${res.extracted_count} 个邮箱（新增 ${res.inserted}，更新 ${res.updated}）`);
+      await loadState(false);
+    } catch (err) {
+      toast('❌ 导入失败: ' + err.message);
+    }
+  });
+
+  $('btnSyncWorkspace').addEventListener('click', async () => {
+    try {
+      const res = await api('/api/sync-workspace', {
+        method: 'POST',
+        body: {
+          batch_no: $('pasteBatchNo').value.trim() || '工作区邮箱池',
+          auto_audit: $('chkAutoAudit').checked,
+          target_service: $('targetServiceSelect').value
+        }
+      });
+      toast(`⚡ 已同步工作区 (${(res.sources || []).join(', ')})，新增 ${res.inserted}，更新 ${res.updated}`);
+      await loadState(false);
+    } catch (err) {
+      toast('❌ 同步失败: ' + err.message);
+    }
+  });
+
+  // 第二步操作：批量深度审查
+  async function triggerAudit(scope) {
+    try {
+      const res = await api('/api/audit', {
+        method: 'POST',
+        body: {
+          scope,
+          batch_no: $('auditBatchSelect').value,
+          target_service: $('targetServiceSelect').value,
+          blocking: false
+        }
+      });
+      if (res.total === 0) {
+        toast('没有符合条件的待审查邮箱');
+        return;
+      }
+      toast(`🔍 已启动并发深度审查（共 ${res.total} 个邮箱）...`);
+      await loadState(false);
+      startAuditPolling();
+    } catch (err) {
+      toast('❌ 启动审查失败: ' + err.message);
+    }
+  }
+
+  $('btnAuditAll').addEventListener('click', () => triggerAudit('all'));
+  $('btnAuditPending').addEventListener('click', () => triggerAudit('pending'));
+
+  // 表格行内按钮事件
+  $('mailboxRows').addEventListener('click', async e => {
+    const viewBtn = e.target.closest('[data-view-mails]');
+    const reauditBtn = e.target.closest('[data-reaudit]');
+    const copyBtn = e.target.closest('[data-copy]');
+    const editBtn = e.target.closest('[data-edit]');
+    const delBtn = e.target.closest('[data-del]');
+
+    if (viewBtn) {
+      const r = state.mailboxes.find(x => x.email === viewBtn.dataset.viewMails);
+      if (!r) return;
+      $('mailModalTitle').textContent = `📬 ${r.email} — 收件箱历史邮件取证`;
+      const svcs = (r.registered_services || []).join('、') || '无';
+      const aliases = (r.former_aliases || []).join('、') || '无';
+      $('mailModalSub').textContent = `历史邮件总数: ${r.msg_count || 0} 封 | 已识别服务: ${svcs} | 前身别名: ${aliases}`;
+      const samples = r.messages_sample || [];
+      if (samples.length === 0) {
+        $('mailModalList').innerHTML = `<div class="empty">${r.audit_status === 'auth_failed' ? '❌ 连接失败：' + esc(r.auth_error) : '收件箱为空，未发现任何历史邮件'}</div>`;
+      } else {
+        $('mailModalList').innerHTML = samples.map((m, idx) => `
+          <div class="mail-item">
+            <div class="mail-item-top">
+              <span><b>#${idx + 1}</b> 发件人: ${esc(m.from)}</span>
+              <span class="mono">${esc(m.date)}</span>
+            </div>
+            <div class="mail-subj">${esc(m.subject || '(无主题)')}</div>
+            ${m.to ? `<div class="mono" style="font-size:11px;color:#64748b;margin-bottom:4px">收件人(To): ${esc(m.to)}</div>` : ''}
+            ${(m.tags || []).length ? `<div style="margin-bottom:4px">${m.tags.map(t => `<span class="tag ${t.includes('🚨') || t.includes('别名') ? 'risk' : ''}">${esc(t)}</span>`).join('')}</div>` : ''}
+            <div class="mail-snip">${esc(m.snippet || '')}</div>
+          </div>
+        `).join('');
+      }
+      $('mailModal').classList.add('open');
+    }
+
+    if (reauditBtn) {
+      const em = reauditBtn.dataset.reaudit;
+      reauditBtn.disabled = true;
+      toast(`🔄 正在重新审查 ${em}...`);
+      try {
+        await api('/api/audit', {
+          method: 'POST',
+          body: {
+            emails: [em],
+            target_service: $('targetServiceSelect').value,
+            blocking: true
+          }
+        });
+        await loadState(false);
+        toast(`✅ ${em} 审查已更新`);
+      } catch (err) {
+        toast('❌ 审查失败: ' + err.message);
+      } finally {
+        reauditBtn.disabled = false;
+      }
+    }
+
+    if (copyBtn) {
+      const r = state.mailboxes.find(x => x.email === copyBtn.dataset.copy);
+      if (!r) return;
+      const line = r.client_id && r.refresh_token
+        ? `${r.email}----${r.password}----${r.client_id}----${r.refresh_token}`
+        : (r.password ? `${r.email}----${r.password}` : r.email);
+      navigator.clipboard.writeText(line);
+      toast(`📋 已复制 ${r.email} 的卡密`);
+    }
+
+    if (editBtn) {
+      const r = state.mailboxes.find(x => x.email === editBtn.dataset.edit);
+      if (!r) return;
+      $('editEmailHidden').value = r.email;
+      $('editModalTitle').textContent = `编辑邮箱：${r.email}`;
+      $('editBatchNo').value = r.batch_no || '';
+      $('editPurpose').value = r.purpose || '';
+      $('editAuditStatus').value = r.audit_status || 'pending';
+      $('editCanReg').value = r.can_register_target ? '1' : '0';
+      $('editNotes').value = r.notes || '';
+      $('editModal').classList.add('open');
+    }
+
+    if (delBtn) {
+      const em = delBtn.dataset.del;
+      if (!confirm(`确定从台账中删除 ${em} 吗？`)) return;
+      await api('/api/delete-mailboxes', { method: 'POST', body: { emails: [em] } });
+      await loadState(false);
+      toast('🗑 已删除 ' + em);
+    }
+  });
+
+  $('btnSaveEdit').addEventListener('click', async () => {
+    await api('/api/update-mailbox', {
+      method: 'POST',
+      body: {
+        email: $('editEmailHidden').value,
+        batch_no: $('editBatchNo').value.trim(),
+        purpose: $('editPurpose').value.trim(),
+        audit_status: $('editAuditStatus').value,
+        can_register_target: $('editCanReg').value === '1',
+        notes: $('editNotes').value.trim()
+      }
+    });
+    $('editModal').classList.remove('open');
+    await loadState(false);
+    toast('✅ 修改已保存');
+  });
+
+  // 生成维权取证报告
+  $('btnForensicReport').addEventListener('click', async () => {
+    try {
+      const batchNo = $('filterBatch').value;
+      const res = await api('/api/forensic-report?batch_no=' + encodeURIComponent(batchNo));
+      $('reportTextarea').value = res.report || '';
+      $('reportModal').classList.add('open');
+    } catch (err) {
+      toast('❌ 生成报告失败: ' + err.message);
+    }
+  });
+
+  $('btnCopyReport').addEventListener('click', () => {
+    navigator.clipboard.writeText($('reportTextarea').value);
+    toast('📋 取证报告已复制到剪贴板，可直接发送给卖家售后！');
+  });
+
+  $('btnDownloadReport').addEventListener('click', () => {
+    const blob = new Blob([$('reportTextarea').value], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Hotmail邮箱审查与取证报告_${new Date().toISOString().slice(0,10)}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // 一键同步可用邮箱至 gptcli-2api 注册机池
+  $('btnSyncToPool').addEventListener('click', async () => {
+    try {
+      const res = await api('/api/sync-to-gptcli', {
+        method: 'POST',
+        body: { include_other_services: true }
+      });
+      toast(`🚀 已将 ${res.usable_synced_count} 个可用邮箱同步至注册机池，并剔除 ${res.bad_marked_failed_count} 个不可用邮箱！`, 3500);
+    } catch (err) {
+      toast('❌ 同步失败: ' + err.message);
+    }
+  });
+
+  // 导出可用卡密 TXT
+  $('btnExportUsableTxt').addEventListener('click', () => {
+    const usable = state.mailboxes.filter(r => r.can_register_target);
+    if (!usable.length) {
+      toast('当前没有可注册目标业务的可用邮箱');
+      return;
+    }
+    const lines = usable.map(r =>
+      r.client_id && r.refresh_token
+        ? `${r.email}----${r.password}----${r.client_id}----${r.refresh_token}`
+        : `${r.email}----${r.password}`
+    );
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `可用Hotmail卡密_${usable.length}个.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast(`📥 已导出 ${usable.length} 个可用邮箱卡密`);
+  });
+
+  // 导出完整 CSV
+  $('btnExportCsv').addEventListener('click', () => {
+    if (!state.mailboxes.length) {
+      toast('没有可导出的记录');
+      return;
+    }
+    const headers = ['邮箱地址', '批次号', '审查分类', '能否注册业务', '已注册服务', '风险与翻新证据', '前身别名', '历史邮件数', '最早邮件时间', '最新邮件时间', '备注'];
+    const rows = state.mailboxes.map(r => [
+      r.email,
+      r.batch_no,
+      (STATUS_META[r.audit_status] || [r.audit_status])[0],
+      r.can_register_target ? '可注册' : '不可注册',
+      (r.registered_services || []).join(' | '),
+      (r.risk_flags || []).join(' | '),
+      (r.former_aliases || []).join(' | '),
+      r.msg_count || 0,
+      r.earliest_msg_date || '',
+      r.latest_msg_date || '',
+      r.notes || ''
+    ]);
+    const csv = [headers, ...rows].map(row =>
+      row.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')
+    ).join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Hotmail邮箱审查台账_${state.mailboxes.length}条.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('📊 完整审查台账 CSV 已导出');
+  });
+
+  // 弹窗关闭控制
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => $(btn.dataset.close).classList.remove('open'));
+  });
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', e => {
+      if (e.target === ov) ov.classList.remove('open');
+    });
+  });
+
+  loadState(true);
+})();
+</script>
+</body>
+</html>

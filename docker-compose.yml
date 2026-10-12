@@ -1,0 +1,17 @@
+services:
+  mail-sieve:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mail-sieve:local
+    container_name: mail-sieve
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8899:8899"
+    environment:
+      TZ: "Asia/Shanghai"
+      MAIL_SIEVE_DB_PATH: "/app/data/hotmail_inventory.sqlite3"
+      GPTCLI_ROOT_DIR: "/gptcli-2api"
+    volumes:
+      - ./data:/app/data
+      - /www/wwwroot/gptcli-2api:/gptcli-2api
