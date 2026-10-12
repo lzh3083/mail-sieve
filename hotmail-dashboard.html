@@ -476,6 +476,7 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
         <button class="tab-btn" data-tab="tab-oauth">🔑 指定 Outlook(OAuth2) 拉取</button>
         <button class="tab-btn" data-tab="tab-cf">☁️ Cloudflare 临时邮箱拉取</button>
         <button class="tab-btn" data-tab="tab-paste">📋 粘贴卡密 / 同步本地邮箱池</button>
+        <button class="tab-btn" data-tab="tab-selfbuild">🛠️ 自建 Hotmail &amp; 提 Token</button>
       </div>
 
       <!-- Tab 1: IMAP 收货邮箱 -->
@@ -562,6 +563,41 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
           <div style="display:flex;gap:8px">
             <button class="btn sm" id="btnSyncWorkspace">⚡ 从当前工作区邮箱池同步 (用于注册的邮箱.txt)</button>
             <button class="btn primary sm" id="btnImportPaste">＋ 导入并解析</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 5: 自建 Hotmail 产号 & 免抓包一键提取 Thunderbird 长效 Token -->
+      <div class="tab-pane" id="tab-selfbuild">
+        <div class="form-row">
+          <div class="field">
+            <label>拟注册邮箱地址（可手填或点击右侧随机生成）</label>
+            <input class="control mono" id="sbEmail" placeholder="ArthurMorganxyz@hotmail.com">
+          </div>
+          <div class="field">
+            <label>拟设置密码</label>
+            <input class="control mono" id="sbPassword" placeholder="强密码">
+          </div>
+          <div class="field">
+            <label>操作</label>
+            <div style="display:flex;gap:6px">
+              <button class="btn primary" id="btnSbStart" style="flex:1;justify-content:center">🎲 生成账号 &amp; 获取8位授权码</button>
+              <a class="btn" href="https://outlook.live.com/mail/0/?prompt=create_account" target="_blank" rel="noopener">🌐 去官网注册</a>
+            </div>
+          </div>
+        </div>
+        <div id="sbDeviceBox" style="display:none;background:#f8fafc;border:1px dashed #60a5fa;border-radius:10px;padding:10px 14px;margin-top:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div>
+              <span style="font-size:12px;font-weight:700;color:#1e40af">🔑 微软 8 位免抓包授权码：</span>
+              <span class="mono" id="sbUserCode" style="font-size:18px;font-weight:900;color:#059669;background:#ecfdf5;padding:2px 10px;border-radius:6px;letter-spacing:1px">—</span>
+              <button class="btn sm" id="btnSbCopyCode" style="margin-left:6px">📋 复制授权码</button>
+              <a class="btn sm primary" id="sbVerifyLink" href="https://www.microsoft.com/link" target="_blank" rel="noopener" style="margin-left:4px">👉 打开 microsoft.com/link 填入授权码</a>
+            </div>
+            <span id="sbPollStatus" style="font-size:12px;font-weight:600;color:var(--amber)">⏳ 等待你在浏览器输入 8 位授权码并点击“接受”...</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:6px">
+            💡 流程：① 点击「去官网注册」用上方生成的账号密码注册 Hotmail（或用 <span class="mono">OutlookRegister</span> 批量自动注册） → ② 打开 <span class="mono">microsoft.com/link</span> 输入上方 8 位码点“接受” → ③ 面板将**自动提取 Thunderbird 长效 refresh_token** 并生成 4 段式卡密入库！
           </div>
         </div>
       </div>
@@ -1446,6 +1482,69 @@ textarea.control { height: auto; min-height: 76px; padding: 8px 10px; resize: ve
       await loadState(false);
     } catch (err) {
       toast('❌ 同步失败: ' + err.message);
+    }
+  });
+
+  // Tab 5: 自建 Hotmail 产号 & 8位设备码自动提取 Thunderbird 长效 Token
+  let sbPollTimer = null;
+  $('btnSbStart').addEventListener('click', async () => {
+    const btn = $('btnSbStart');
+    btn.disabled = true;
+    try {
+      const res = await api('/api/oauth-device-start', {
+        method: 'POST',
+        body: { suffix: '@hotmail.com' }
+      });
+      const id = res.generated_identity || {};
+      const da = res.device_auth || {};
+      if (!$('sbEmail').value.trim()) $('sbEmail').value = id.email || '';
+      if (!$('sbPassword').value.trim()) $('sbPassword').value = id.password || '';
+      $('sbUserCode').textContent = da.user_code || '—';
+      $('sbVerifyLink').href = da.verification_uri || 'https://www.microsoft.com/link';
+      $('sbDeviceBox').style.display = 'block';
+      $('sbPollStatus').textContent = '⏳ 正在监听授权结果（去浏览器输入8位码点“接受”后自动入库）...';
+      $('sbPollStatus').style.color = 'var(--amber)';
+
+      if (sbPollTimer) clearInterval(sbPollTimer);
+      sbPollTimer = setInterval(async () => {
+        try {
+          const pRes = await api('/api/oauth-device-poll', {
+            method: 'POST',
+            body: {
+              device_code: da.device_code,
+              email: $('sbEmail').value.trim(),
+              password: $('sbPassword').value.trim(),
+              batch_no: '自建Hotmail_独享'
+            }
+          });
+          if (pRes.status === 'authorized') {
+            clearInterval(sbPollTimer);
+            sbPollTimer = null;
+            $('sbEmail').value = pRes.email;
+            $('sbPollStatus').textContent = `✅ 授权成功！已自动提取长效 Token 并入库：${pRes.email}`;
+            $('sbPollStatus').style.color = 'var(--green)';
+            toast(`🎉 自建邮箱 ${pRes.email} 长效 Token 提取成功并已入库审查！`, 4000);
+            await loadState(false);
+          }
+        } catch (e) {
+          clearInterval(sbPollTimer);
+          sbPollTimer = null;
+          $('sbPollStatus').textContent = '❌ 授权超时或失败: ' + e.message;
+          $('sbPollStatus').style.color = 'var(--red)';
+        }
+      }, 4000);
+    } catch (err) {
+      toast('❌ 获取授权码失败: ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('btnSbCopyCode').addEventListener('click', () => {
+    const code = $('sbUserCode').textContent.trim();
+    if (code && code !== '—') {
+      navigator.clipboard.writeText(code);
+      toast('📋 已复制 8 位微软授权码: ' + code);
     }
   });
 

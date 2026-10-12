@@ -1978,6 +1978,126 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(res)
                 return
 
+            if path == "/api/oauth-device-start":
+                import random
+                import secrets
+                import string
+
+                suffix = str(body.get("suffix") or "@hotmail.com").strip()
+                if not suffix.startswith("@"):
+                    suffix = "@" + suffix
+                first_names = ["Arthur", "Evelyn", "Oliver", "Clara", "Julian", "Vivian", "Marcus", "Elena", "Adrian", "Nora", "Felix", "lucas", "Hannah", "victor", "Diana"]
+                last_names = ["Morgan", "Bennett", "Foster", "Hayes", "Coleman", "Brooks", "elliott", "Palmer", "Warren", "Spencer", "Walsh", "Barker", "pierce", "sutton"]
+                fn = random.choice(first_names).capitalize()
+                ln = random.choice(last_names).capitalize()
+                rand_tail = "".join(random.choices(string.ascii_lowercase, k=3)) + "".join(random.choices(string.digits, k=2))
+                gen_email = f"{fn}{ln}{rand_tail}{suffix}"
+                pw_chars = string.ascii_letters + string.digits + "!@#$%"
+                gen_pwd = (
+                    random.choice(string.ascii_uppercase)
+                    + random.choice(string.ascii_lowercase)
+                    + random.choice(string.digits)
+                    + random.choice("!@#$%")
+                    + "".join(secrets.choice(pw_chars) for _ in range(9))
+                )
+                birth_str = f"{random.randint(1982, 2003)}-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}"
+
+                cid = "9e5f94bc-e8a4-4e73-b8be-63364c29d753"
+                scopes = "openid email profile offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send"
+                req_dc = urllib.request.Request(
+                    "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode",
+                    data=urllib.parse.urlencode({"client_id": cid, "scope": scopes}).encode("utf-8"),
+                    headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0"},
+                )
+                with urllib.request.urlopen(req_dc, timeout=15) as resp:
+                    dc_data = json.loads(resp.read().decode("utf-8"))
+
+                self._send_json({
+                    "ok": True,
+                    "generated_identity": {
+                        "email": gen_email,
+                        "password": gen_pwd,
+                        "first_name": fn,
+                        "last_name": ln,
+                        "birth_date": birth_str,
+                        "client_id": cid,
+                    },
+                    "device_auth": {
+                        "user_code": dc_data.get("user_code"),
+                        "device_code": dc_data.get("device_code"),
+                        "verification_uri": dc_data.get("verification_uri") or "https://www.microsoft.com/link",
+                        "expires_in": dc_data.get("expires_in", 900),
+                        "interval": dc_data.get("interval", 5),
+                    },
+                })
+                return
+
+            if path == "/api/oauth-device-poll":
+                import base64
+
+                device_code = str(body.get("device_code") or "").strip()
+                fallback_email = str(body.get("email") or "").strip()
+                password = str(body.get("password") or "").strip()
+                batch_no = str(body.get("batch_no") or "自建Hotmail_独享").strip()
+                cid = "9e5f94bc-e8a4-4e73-b8be-63364c29d753"
+                if not device_code:
+                    self._send_json({"ok": False, "error": "缺少 device_code"}, 400)
+                    return
+
+                req_tok = urllib.request.Request(
+                    "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+                    data=urllib.parse.urlencode({
+                        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                        "client_id": cid,
+                        "device_code": device_code,
+                    }).encode("utf-8"),
+                    headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0"},
+                )
+                try:
+                    with urllib.request.urlopen(req_tok, timeout=15) as resp:
+                        tok_data = json.loads(resp.read().decode("utf-8"))
+                except urllib.error.HTTPError as he:
+                    err_json = {}
+                    try:
+                        err_json = json.loads(he.read().decode("utf-8", errors="replace"))
+                    except Exception:
+                        pass
+                    err_code = err_json.get("error") or "authorization_pending"
+                    if err_code in ("authorization_pending", "slow_down"):
+                        self._send_json({"ok": True, "status": "pending"})
+                        return
+                    self._send_json({"ok": False, "status": "failed", "error": err_json.get("error_description") or err_code})
+                    return
+
+                refresh_token = str(tok_data.get("refresh_token") or "").strip()
+                id_token = str(tok_data.get("id_token") or "").strip()
+                detected_email = fallback_email
+                if id_token and "." in id_token:
+                    try:
+                        payload_b64 = id_token.split(".")[1]
+                        payload_b64 += "=" * (-len(payload_b64) % 4)
+                        claims = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8", errors="replace"))
+                        detected_email = str(claims.get("email") or claims.get("preferred_username") or fallback_email).strip()
+                    except Exception:
+                        pass
+
+                if not detected_email or "@" not in detected_email:
+                    self._send_json({"ok": False, "status": "failed", "error": "未能识别授权的邮箱地址，请先填写邮箱名"})
+                    return
+
+                card_line = f"{detected_email}----{password}----{cid}----{refresh_token}"
+                recs = parse_purchased_accounts_text(card_line, default_batch=batch_no, default_source="自建Hotmail设备码授权")
+                upsert_mailboxes(recs)
+                run_batch_audit(emails=[detected_email], target_service="openai", blocking=False)
+                self._send_json({
+                    "ok": True,
+                    "status": "authorized",
+                    "email": detected_email,
+                    "refresh_token": refresh_token,
+                    "card_line": card_line,
+                })
+                return
+
             self._send_json({"ok": False, "error": f"Unknown endpoint: {path}"}, 404)
         except Exception as exc:
             self._send_json({"ok": False, "error": str(exc), "trace": traceback.format_exc()[-400:]}, 500)
