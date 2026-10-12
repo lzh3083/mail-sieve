@@ -969,55 +969,62 @@ def _fetch_messages_via_graph_api(access_token: str, top: int = 25) -> list[dict
 def _fetch_messages_via_imap(email_addr: str, auth_mode: str, secret: str, max_fetch: int = 30) -> tuple[int, list[dict[str, str]]]:
     """
     通过 IMAP (XOAUTH2 或密码登录) 读取 Outlook/Hotmail 收件箱历史邮件。
-    一次性批量抓取邮件头与文本摘要，兼顾高速度与取证深度。
+    一次性批量抓取邮件头与文本摘要，兼顾高速度与取证深度，并对微软瞬态断连自动重试。
     """
-    mail = imaplib.IMAP4_SSL("outlook.office365.com", 993, timeout=15)
-    try:
-        if auth_mode == "xoauth2":
-            auth_str = f"user={email_addr}\x01auth=Bearer {secret}\x01\x01".encode("utf-8")
-            mail.authenticate("XOAUTH2", lambda _: auth_str)
-        else:
-            mail.login(email_addr, secret)
-
-        status, cnt_data = mail.select("INBOX", readonly=True)
-        if status != "OK":
-            raise RuntimeError(f"IMAP select INBOX 失败: {status}")
-        total = int(cnt_data[0].decode()) if cnt_data and cnt_data[0] else 0
-        if total <= 0:
-            return 0, []
-
-        start_seq = max(1, total - max_fetch + 1)
-        # 一次性批量拉取邮件（包含头部和正文，最多30封，避免逐封往返耗时）
-        st, fetch_data = mail.fetch(f"{start_seq}:{total}", "(RFC822)")
-        if st != "OK" or not fetch_data:
-            return total, []
-
-        messages: list[dict[str, str]] = []
-        for part in fetch_data:
-            if not (isinstance(part, tuple) and len(part) >= 2 and isinstance(part[1], bytes)):
-                continue
-            msg = email_lib.message_from_bytes(part[1])
-            subj = _decode_mime_header(msg.get("Subject"))
-            sender = _decode_mime_header(msg.get("From"))
-            to_hdr = _decode_mime_header(msg.get("To"))
-            delivered_to = _decode_mime_header(msg.get("Delivered-To"))
-            orig_to = _decode_mime_header(msg.get("X-Original-To"))
-            dt_str = _format_date_short(msg.get("Date") or "")
-            body_text, _ = _extract_email_body_and_attachments(msg)
-            combined_to = ", ".join(x for x in (to_hdr, delivered_to, orig_to) if x)
-            messages.append({
-                "date": dt_str,
-                "from": sender,
-                "to": combined_to,
-                "subject": subj,
-                "body": _clean_snippet(body_text, 420),
-            })
-        return total, messages
-    finally:
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        mail = imaplib.IMAP4_SSL("outlook.office365.com", 993, timeout=15)
         try:
-            mail.logout()
-        except Exception:
-            pass
+            if auth_mode == "xoauth2":
+                auth_str = f"user={email_addr}\x01auth=Bearer {secret}\x01\x01".encode("utf-8")
+                mail.authenticate("XOAUTH2", lambda _: auth_str)
+            else:
+                mail.login(email_addr, secret)
+
+            status, cnt_data = mail.select("INBOX", readonly=True)
+            if status != "OK":
+                raise RuntimeError(f"IMAP select INBOX 失败: {status}")
+            total = int(cnt_data[0].decode()) if cnt_data and cnt_data[0] else 0
+            if total <= 0:
+                return 0, []
+
+            start_seq = max(1, total - max_fetch + 1)
+            # 一次性批量拉取邮件（包含头部和正文，最多30封，避免逐封往返耗时）
+            st, fetch_data = mail.fetch(f"{start_seq}:{total}", "(RFC822)")
+            if st != "OK" or not fetch_data:
+                return total, []
+
+            messages: list[dict[str, str]] = []
+            for part in fetch_data:
+                if not (isinstance(part, tuple) and len(part) >= 2 and isinstance(part[1], bytes)):
+                    continue
+                msg = email_lib.message_from_bytes(part[1])
+                subj = _decode_mime_header(msg.get("Subject"))
+                sender = _decode_mime_header(msg.get("From"))
+                to_hdr = _decode_mime_header(msg.get("To"))
+                delivered_to = _decode_mime_header(msg.get("Delivered-To"))
+                orig_to = _decode_mime_header(msg.get("X-Original-To"))
+                dt_str = _format_date_short(msg.get("Date") or "")
+                body_text, _ = _extract_email_body_and_attachments(msg)
+                combined_to = ", ".join(x for x in (to_hdr, delivered_to, orig_to) if x)
+                messages.append({
+                    "date": dt_str,
+                    "from": sender,
+                    "to": combined_to,
+                    "subject": subj,
+                    "body": _clean_snippet(body_text, 420),
+                })
+            return total, messages
+        except Exception as exc:
+            last_exc = exc
+            if attempt < 2:
+                time.sleep(1.0 * (attempt + 1))
+        finally:
+            try:
+                mail.logout()
+            except Exception:
+                pass
+    raise last_exc or RuntimeError("IMAP 连接失败")
 
 
 def _check_masked_alias_mismatch(current_email: str, masked_account: str) -> bool:
