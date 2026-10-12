@@ -10,8 +10,8 @@ services:
       - "0.0.0.0:8899:8899"
     environment:
       TZ: "Asia/Shanghai"
-      MAIL_SIEVE_DB_PATH: "/app/data/hotmail_inventory.sqlite3"
+      MAIL_SIEVE_DB_PATH: "/app/hotmail_inventory.sqlite3"
       GPTCLI_ROOT_DIR: "/gptcli-2api"
     volumes:
-      - ./data:/app/data
+      - ./:/app
       - /www/wwwroot/gptcli-2api:/gptcli-2api
